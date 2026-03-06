@@ -1,13 +1,18 @@
-import {Server} from "socket.io";
+import { Server } from "socket.io";
 import http from "http";
 import express from "express";
 
 const app = express();
 const server = http.createServer(app);
+
 const io = new Server(server, {
     cors: {
-        origin: [process.env.FRONTEND_URL || "http://localhost:5173"], // ✅ fixed
+        origin: [process.env.FRONTEND_URL || "http://localhost:5173"],
+        credentials: true, // ✅ allow cookies/auth headers
     },
+    pingTimeout: 60000,   // ✅ wait 60s before closing idle connection
+    pingInterval: 25000,  // ✅ ping every 25s to keep connection alive
+    transports: ["websocket", "polling"], // ✅ websocket first, fallback to polling
 });
 
 // store online users { userId: [socketId1, socketId2, ...] }
@@ -18,31 +23,30 @@ io.on("connection", (socket) => {
     console.log("A user connected", socket.id, "userId:", userId);
 
     if (userId) {
-        // store multiple socket IDs per user
         if (!userSocketMap[userId]) {
             userSocketMap[userId] = [];
         }
         userSocketMap[userId].push(socket.id);
     }
 
-    // emit online users to all connected clients
+    // ✅ emit to ALL clients including the one who just joined
     io.emit("getOnlineUsers", Object.keys(userSocketMap));
 
-    socket.on("disconnect", () => {
-        console.log("A user disconnected", socket.id);
+    // ✅ confirm to the joining user they are connected
+    socket.emit("connected", { socketId: socket.id, userId });
 
-        if (userId) {
-            // remove only this specific socket ID
+    socket.on("disconnect", (reason) => {
+        console.log("A user disconnected", socket.id, "reason:", reason);
+
+        if (userId && userSocketMap[userId]) {
             userSocketMap[userId] = userSocketMap[userId].filter(
                 (id) => id !== socket.id
             );
-            // if user has no more active sockets, remove them entirely
             if (userSocketMap[userId].length === 0) {
                 delete userSocketMap[userId];
             }
         }
 
-        // update online users for all clients
         io.emit("getOnlineUsers", Object.keys(userSocketMap));
     });
 });
