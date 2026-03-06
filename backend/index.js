@@ -16,6 +16,7 @@ app.use(cors({
 }
 ));
 const PORT = process.env.PORT || 3000;
+app.get("/", (req, res) => res.send("OK")); // ✅ health check for UptimeRobot
 app.use('/api/auth',authRoutes);
 app.use('/api/messages',messageRoutes);
 server.listen(PORT,()=>{
