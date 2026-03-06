@@ -6,7 +6,7 @@ import { useAuthStore } from "./useAuthStore";
 export const useChatStore = create((set, get) => ({
   messages: [],
   users: [],
-  selectedUser: JSON.parse(localStorage.getItem("selectedUser")) || null,
+  selectedUser: null, // ✅ no localStorage — prevents cross-user data leaking
   isUsersLoading: false,
   isMessagesLoading: false,
 
@@ -35,13 +35,40 @@ export const useChatStore = create((set, get) => ({
   },
 
   sendMessage: async (messageData) => {
-    const { selectedUser } = get();
+    const { selectedUser, messages } = get();
+    const authUser = useAuthStore.getState().authUser;
+
+    // ✅ show message instantly on sender's screen
+    const tempMessage = {
+      _id: `temp_${Date.now()}`,
+      senderId: authUser._id,
+      receiverId: selectedUser._id,
+      text: messageData.text,
+      image: messageData.image || null,
+      createdAt: new Date().toISOString(),
+      isTemp: true,
+    };
+
+    set({ messages: [...messages, tempMessage] });
+
     try {
-      // ✅ just send — don't add to state here
-      // socket will deliver it back to sender via newMessage event
-      await axiosInstance.post(`/messages/send/${selectedUser._id}`, messageData);
+      const res = await axiosInstance.post(
+        `/messages/send/${selectedUser._id}`,
+        messageData
+      );
+
+      // ✅ replace temp message with real server message
+      set({
+        messages: get().messages.map((m) =>
+          m._id === tempMessage._id ? res.data : m
+        ),
+      });
     } catch (error) {
-      toast.error(error.response.data.message);
+      // ✅ remove temp message if failed
+      set({
+        messages: get().messages.filter((m) => m._id !== tempMessage._id),
+      });
+      toast.error("Failed to send message");
     }
   },
 
@@ -52,20 +79,34 @@ export const useChatStore = create((set, get) => ({
     const socket = useAuthStore.getState().socket;
     if (!socket) return;
 
-    // ✅ remove old listener first to avoid duplicates
     socket.off("newMessage");
 
     socket.on("newMessage", (newMessage) => {
-      // ✅ accept messages from selected user OR from yourself
       const isFromSelectedUser = newMessage.senderId === selectedUser._id;
       const isFromMe = newMessage.senderId === useAuthStore.getState().authUser._id;
       if (!isFromSelectedUser && !isFromMe) return;
 
-      // ✅ prevent duplicate messages
-      const exists = get().messages.find((m) => m._id === newMessage._id);
-      if (exists) return;
+      const messages = get().messages;
 
-      set({ messages: [...get().messages, newMessage] });
+      // ✅ replace temp message with real one from socket
+      const tempExists = messages.find(
+        (m) => m.isTemp && 
+        m.text === newMessage.text && 
+        m.senderId === newMessage.senderId
+      );
+
+      if (tempExists) {
+        set({
+          messages: messages.map((m) =>
+            m._id === tempExists._id ? newMessage : m
+          ),
+        });
+      } else {
+        // ✅ prevent duplicates
+        const exists = messages.find((m) => m._id === newMessage._id);
+        if (exists) return;
+        set({ messages: [...messages, newMessage] });
+      }
     });
   },
 
@@ -76,11 +117,7 @@ export const useChatStore = create((set, get) => ({
   },
 
   setSelectedUser: (selectedUser) => {
-    if (selectedUser) {
-      localStorage.setItem("selectedUser", JSON.stringify(selectedUser));
-    } else {
-      localStorage.removeItem("selectedUser");
-    }
+    // ✅ removed localStorage — no more cross-user data leaking
     set({ selectedUser });
   },
 }));
