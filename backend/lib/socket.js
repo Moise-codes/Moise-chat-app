@@ -6,7 +6,7 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
     cors: {
-        origin: ["https://moise-chat-frontend2.onrender.com", "http://localhost:5173"], // ✅ hardcoded to fix CORS
+        origin: ["http://localhost:5173"],
     },
 });
 
