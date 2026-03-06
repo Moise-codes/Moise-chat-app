@@ -35,10 +35,11 @@ export const useChatStore = create((set, get) => ({
   },
 
   sendMessage: async (messageData) => {
-    const { selectedUser, messages } = get();
+    const { selectedUser } = get();
     try {
-      const res = await axiosInstance.post(`/messages/send/${selectedUser._id}`, messageData);
-      set({ messages: [...messages, res.data] });
+      // ✅ just send — don't add to state here
+      // socket will deliver it back to sender via newMessage event
+      await axiosInstance.post(`/messages/send/${selectedUser._id}`, messageData);
     } catch (error) {
       toast.error(error.response.data.message);
     }
@@ -55,7 +56,15 @@ export const useChatStore = create((set, get) => ({
     socket.off("newMessage");
 
     socket.on("newMessage", (newMessage) => {
-      if (newMessage.senderId !== selectedUser._id) return;
+      // ✅ accept messages from selected user OR from yourself
+      const isFromSelectedUser = newMessage.senderId === selectedUser._id;
+      const isFromMe = newMessage.senderId === useAuthStore.getState().authUser._id;
+      if (!isFromSelectedUser && !isFromMe) return;
+
+      // ✅ prevent duplicate messages
+      const exists = get().messages.find((m) => m._id === newMessage._id);
+      if (exists) return;
+
       set({ messages: [...get().messages, newMessage] });
     });
   },
@@ -63,7 +72,7 @@ export const useChatStore = create((set, get) => ({
   unsubscribeFromMessages: () => {
     const socket = useAuthStore.getState().socket;
     if (!socket) return;
-    socket.off("newMessage"); // ✅ clean up listener
+    socket.off("newMessage");
   },
 
   setSelectedUser: (selectedUser) => {

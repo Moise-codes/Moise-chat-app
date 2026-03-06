@@ -7,7 +7,7 @@ const userSchema = new mongoose.Schema({
   },
   fullName: {
     type: String,
-    require: true,
+    required: true, // ✅ fixed typo: was "require"
   },
   password: {
     type: String,
@@ -18,9 +18,8 @@ const userSchema = new mongoose.Schema({
     type: String,
     default: "",
   },
-  
 },
-{timestamps: true}
+{ timestamps: true }
 );
-const User = mongoose.model("User",userSchema);
+const User = mongoose.model("User", userSchema);
 export default User;

@@ -6,14 +6,13 @@ import { Users } from "lucide-react";
 
 const Sidebar = () => {
   const { getUsers, users, selectedUser, setSelectedUser, isUsersLoading } = useChatStore();
-  const { onlineUsers } = useAuthStore();
+  const { onlineUsers, authUser } = useAuthStore();
   const [showOnlineOnly, setShowOnlineOnly] = useState(false);
 
   useEffect(() => {
     getUsers();
   }, [getUsers]);
 
-  // ✅ re-fetch users when online users list changes so sidebar updates instantly
   useEffect(() => {
     if (onlineUsers.length > 0) getUsers();
   }, [onlineUsers]);
@@ -41,14 +40,13 @@ const Sidebar = () => {
             />
             <span className="text-sm">Show online only</span>
           </label>
-          {/* ✅ subtract 1 to exclude yourself from online count */}
           <span className="text-xs text-zinc-500">
             ({Math.max((onlineUsers || []).length - 1, 0)} online)
           </span>
         </div>
       </div>
 
-      <div className="overflow-y-auto w-full py-3">
+      <div className="overflow-y-auto w-full py-3 flex-1">
         {filteredUsers.map((user) => (
           <button
             key={user._id}
@@ -82,6 +80,25 @@ const Sidebar = () => {
           <div className="text-center text-zinc-500 py-4">No online users</div>
         )}
       </div>
+
+      {/* ✅ current logged in user shown at bottom of sidebar */}
+      {authUser && (
+        <div className="border-t border-base-300 p-3 flex items-center gap-3">
+          <div className="relative mx-auto lg:mx-0">
+            <img
+              src={authUser.profilePic || "/avatar.png"}
+              alt={authUser.fullName}
+              className="size-10 object-cover rounded-full border border-base-300"
+            />
+            {/* ✅ always show yourself as online */}
+            <span className="absolute bottom-0 right-0 size-3 bg-green-500 rounded-full ring-2 ring-zinc-900" />
+          </div>
+          <div className="hidden lg:block text-left min-w-0">
+            <div className="font-medium truncate">{authUser.fullName}</div>
+            <div className="text-xs text-zinc-400">You • Online</div>
+          </div>
+        </div>
+      )}
     </aside>
   );
 };

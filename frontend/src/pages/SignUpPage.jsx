@@ -27,8 +27,7 @@ const SignUpPage = () => {
     e.preventDefault();
     const success = validateForm();
     if (success === true) {
-      toast.success("Account created successfully");
-      signup(formData);
+      signup(formData); // ✅ removed premature toast — useAuthStore already handles it
     }
   };
 
@@ -59,9 +58,7 @@ const SignUpPage = () => {
                   className="input input-bordered w-full pl-10"
                   placeholder="John Doe"
                   value={formData.fullName}
-                  onChange={(e) =>
-                    setFormData({ ...formData, fullName: e.target.value })
-                  }
+                  onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
                 />
               </div>
             </div>
@@ -79,9 +76,7 @@ const SignUpPage = () => {
                   className="input input-bordered w-full pl-10"
                   placeholder="you@example.com"
                   value={formData.email}
-                  onChange={(e) =>
-                    setFormData({ ...formData, email: e.target.value })
-                  }
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 />
               </div>
             </div>
@@ -99,9 +94,7 @@ const SignUpPage = () => {
                   className="input input-bordered w-full pl-10 pr-10"
                   placeholder="••••••••"
                   value={formData.password}
-                  onChange={(e) =>
-                    setFormData({ ...formData, password: e.target.value })
-                  }
+                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                 />
                 <button
                   type="button"
@@ -127,8 +120,8 @@ const SignUpPage = () => {
                 "Create Account"
               )}
             </button>
-
           </form>
+
           <div className="text-center">
             <p className="text-base-content/60">
               Already have an account?{" "}
@@ -139,7 +132,6 @@ const SignUpPage = () => {
           </div>
         </div>
       </div>
-      {/*right side */}
       <AuthImagePattern
         title="Join our community"
         subtitle="Connect with friends, share moments, and stay in touch with your loved ones."
