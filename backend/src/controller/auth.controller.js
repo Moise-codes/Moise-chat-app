@@ -32,7 +32,6 @@ export const signup = async (req, res) => {
             generateToken(newUser._id, res);
             await newUser.save();
 
-            // ✅ respond IMMEDIATELY — don't wait for email
             res.status(201).json({
                 _id: newUser._id,
                 fullName: newUser.fullName,
@@ -40,7 +39,6 @@ export const signup = async (req, res) => {
                 profilePic: newUser.profilePic,
             });
 
-            // ✅ send welcome email in background after responding
             transporter.sendMail({
                 from: `"Chatty App" <${process.env.EMAIL_USER}>`,
                 to: email,
@@ -82,7 +80,6 @@ export const login = async (req, res) => {
 
         generateToken(user._id, res);
 
-        // ✅ respond IMMEDIATELY — don't wait for email
         res.status(200).json({
             _id: user._id,
             fullName: user.fullName,
@@ -91,7 +88,6 @@ export const login = async (req, res) => {
             message: "User logged in successfully."
         });
 
-        // ✅ send login notification email in background after responding
         transporter.sendMail({
             from: `"Chatty App" <${process.env.EMAIL_USER}>`,
             to: email,
@@ -114,9 +110,15 @@ export const login = async (req, res) => {
     }
 };
 
+// ✅ fixed logout — clears cookie with exact same settings as when it was set
 export const logout = async (req, res) => {
     try {
-        res.cookie("jwt", "", { maxAge: 0 });
+        res.cookie("jwt", "", {
+            maxAge: 0,
+            httpOnly: true,
+            sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
+            secure: process.env.NODE_ENV === "production"
+        });
         res.status(200).json({ message: "Logged out successfully" });
     } catch (error) {
         console.log("Error in logout controller", error.message);
