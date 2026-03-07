@@ -28,7 +28,6 @@ const ChatContainer = () => {
 
   useEffect(() => {
     if (messageEndRef.current && messages) {
-      // ✅ instant scroll on load, smooth on new message
       messageEndRef.current.scrollIntoView({ behavior: "smooth" });
     }
   }, [messages]);
@@ -47,16 +46,15 @@ const ChatContainer = () => {
     <div className="flex-1 flex flex-col overflow-auto">
       <ChatHeader />
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div className="flex-1 overflow-y-auto p-2 sm:p-4 space-y-4">
         {messages.map((message, index) => (
           <div
             key={message._id}
             className={`chat ${message.senderId === authUser._id ? "chat-end" : "chat-start"}`}
-            // ✅ only put ref on the LAST message not every message
             ref={index === messages.length - 1 ? messageEndRef : null}
           >
             <div className="chat-image avatar">
-              <div className="size-10 rounded-full border">
+              <div className="size-8 sm:size-10 rounded-full border">
                 <img
                   src={
                     message.senderId === authUser._id
@@ -75,7 +73,7 @@ const ChatContainer = () => {
                 {formatMessageTime(message.createdAt)}
               </time>
             </div>
-            <div className={`chat-bubble flex flex-col ${
+            <div className={`chat-bubble flex flex-col max-w-[80vw] sm:max-w-none ${
               message.senderId === authUser._id
                 ? "bg-primary text-primary-content"
                 : "bg-base-200 text-base-content"
@@ -84,7 +82,7 @@ const ChatContainer = () => {
                 <img
                   src={message.image}
                   alt="Attachment"
-                  className="sm:max-w-[200px] rounded-md mb-2"
+                  className="max-w-[160px] sm:max-w-[200px] rounded-md mb-2"
                 />
               )}
               {message.text && <p>{message.text}</p>}

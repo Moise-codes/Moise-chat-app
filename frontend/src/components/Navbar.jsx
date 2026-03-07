@@ -18,7 +18,7 @@ const Navbar = () => {
                         </Link>
                     </div>
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1 sm:gap-2">
                         <Link to={"/settings"} className="btn btn-sm gap-2 transition-colors">
                             <Settings className="w-4 h-4" />
                             <span className="hidden sm:inline">Settings</span>
@@ -26,8 +26,7 @@ const Navbar = () => {
 
                         {authUser && (
                             <>
-                                {/* ✅ show current logged in user */}
-                                <div className="flex items-center gap-2 px-3 py-1 rounded-lg bg-base-200">
+                                <div className="flex items-center gap-2 px-2 sm:px-3 py-1 rounded-lg bg-base-200">
                                     <img
                                         src={authUser.profilePic || "/avatar.png"}
                                         alt={authUser.fullName}
@@ -43,7 +42,7 @@ const Navbar = () => {
                                     <span className="hidden sm:inline">Profile</span>
                                 </Link>
 
-                                <button className="flex gap-2 items-center" onClick={logout}>
+                                <button className="flex gap-2 items-center btn btn-sm btn-ghost" onClick={logout}>
                                     <LogOut className="size-5" />
                                     <span className="hidden sm:inline">Logout</span>
                                 </button>

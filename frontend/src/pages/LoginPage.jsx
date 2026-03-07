@@ -30,7 +30,7 @@ const LoginPage = () => {
               transition-colors"
               >
                 <MessageSquare className="w-6 h-6 text-primary" />
-              </div>
+              </div>k
               <h1 className="text-2xl font-bold mt-2">Welcome Back To Moise Chat-App</h1>
               <p className="text-base-content/60">Sign in to your account</p>
             </div>
