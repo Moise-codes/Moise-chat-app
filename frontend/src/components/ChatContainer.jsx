@@ -11,7 +11,7 @@ import Linkify from "react-linkify";
 const REACTIONS = ["👍", "❤️", "😂", "😮", "😢", "🔥"];
 const URL_REGEX = /(https?:\/\/[^\s]+)/g;
 const YOUTUBE_ID_REGEX = /(?:v=|youtu\.be\/)([^&\s]+)/;
-const FORMAT_REGEX = /(\*\*.*?\*\*|_.*?_|~~.*?~~)/g;
+const FORMAT_REGEX = /(\*\*[^*]+\*\*|_[^_]+_|~~[^~]+~~)/g;
 
 function YoutubePreview({ videoId, url }) {
   return (
@@ -60,13 +60,13 @@ function FormattedText({ text }) {
   return (
     <p>
       {parts.map((part, i) => {
-        if (part.startsWith("**") && part.endsWith("**")) {
+        if (part.length > 4 && part.startsWith("**") && part.endsWith("**")) {
           return <strong key={i}>{part.slice(2, -2)}</strong>;
         }
-        if (part.startsWith("_") && part.endsWith("_")) {
+        if (part.length > 2 && part.startsWith("_") && part.endsWith("_") && !part.startsWith("__")) {
           return <em key={i}>{part.slice(1, -1)}</em>;
         }
-        if (part.startsWith("~~") && part.endsWith("~~")) {
+        if (part.length > 4 && part.startsWith("~~") && part.endsWith("~~")) {
           return <s key={i}>{part.slice(2, -2)}</s>;
         }
         return part;
