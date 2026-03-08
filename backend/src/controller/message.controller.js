@@ -41,12 +41,16 @@ export const sendMessage = async (req, res) => {
         let imageUrl, videoUrl, fileUrl, audioUrl;
 
         if (image) {
-            const uploadResponse = await cloudinary.uploader.upload(image);
+            const uploadResponse = await cloudinary.uploader.upload(image, {
+                resource_type: "image",
+                access_mode: "public",
+            });
             imageUrl = uploadResponse.secure_url;
         }
         if (video) {
             const uploadResponse = await cloudinary.uploader.upload(video, {
                 resource_type: "video",
+                access_mode: "public",
                 chunk_size: 6000000,
             });
             videoUrl = uploadResponse.secure_url;
@@ -54,6 +58,7 @@ export const sendMessage = async (req, res) => {
         if (file) {
             const uploadResponse = await cloudinary.uploader.upload(file, {
                 resource_type: "raw",
+                access_mode: "public",
                 public_id: `files/${Date.now()}_${fileName || "file"}`,
             });
             fileUrl = uploadResponse.secure_url;
@@ -61,6 +66,7 @@ export const sendMessage = async (req, res) => {
         if (audio) {
             const uploadResponse = await cloudinary.uploader.upload(audio, {
                 resource_type: "raw",
+                access_mode: "public",
                 public_id: `audio/${Date.now()}_voice.webm`,
             });
             audioUrl = uploadResponse.secure_url;
@@ -147,7 +153,7 @@ export const deleteMessage = async (req, res) => {
         for (const field of ["image", "video", "fileUrl", "audio"]) {
             if (message[field]) {
                 try {
-                    const publicId = message[field].split("/").pop().split(".")[0];
+                    const publicId = message[field].split("/").popa().split(".")[0];
                     const resourceType = field === "image" ? "image" : field === "video" ? "video" : "raw";
                     await cloudinary.uploader.destroy(publicId, { resource_type: resourceType });
                 } catch (err) {
