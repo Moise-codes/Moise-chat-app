@@ -12,35 +12,35 @@ const REACTIONS = ["👍", "❤️", "😂", "😮", "😢", "🔥"];
 
 const LinkPreview = ({ text }) => {
   const urlRegex = /(https?:\/\/[^\s]+)/g;
-  const urls = text?.match(urlRegex);
+  const urls = text ? text.match(urlRegex) : null;
   if (!urls) return null;
   const url = urls[0];
   const isYoutube = url.includes("youtube.com") || url.includes("youtu.be");
-  if (isYoutube) {
-    const videoId = url.match(/(?:v=|youtu\.be\/)([^&\s]+)/)?.[1];
-    if (videoId) {
-      return (
-        <div className="mt-2 rounded-lg overflow-hidden border border-base-300 max-w-[260px]">
-          <img
-            src={`https://img.youtube.com/vi/${videoId}/hqdefault.jpg`}
-            alt="YouTube preview"
-            className="w-full object-cover"
-          />
-          <div className="p-2 bg-base-200 flex items-center gap-2">
-            <span className="text-xs font-semibold text-error">▶ YouTube</span>
-            
-              href={url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-xs underline truncate opacity-70"
-            >
-              {url}
-            </a>
-          </div>
+  const videoId = isYoutube ? url.match(/(?:v=|youtu\.be\/)([^&\s]+)/) : null;
+
+  if (isYoutube && videoId && videoId[1]) {
+    return (
+      <div className="mt-2 rounded-lg overflow-hidden border border-base-300 max-w-[260px]">
+        <img
+          src={"https://img.youtube.com/vi/" + videoId[1] + "/hqdefault.jpg"}
+          alt="YouTube preview"
+          className="w-full object-cover"
+        />
+        <div className="p-2 bg-base-200 flex items-center gap-2">
+          <span className="text-xs font-semibold text-error">YouTube</span>
+          
+            href={url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-xs underline truncate opacity-70"
+          >
+            {url}
+          </a>
         </div>
-      );
-    }
+      </div>
+    );
   }
+
   return (
     
       href={url}
@@ -102,7 +102,7 @@ const ChatContainer = () => {
       a.download = "image_" + Date.now() + ".jpg";
       a.click();
       URL.revokeObjectURL(url);
-    } catch {
+    } catch (err) {
       window.open(imageUrl, "_blank");
     }
   };
@@ -111,7 +111,7 @@ const ChatContainer = () => {
     if (navigator.share) {
       try {
         await navigator.share({ url: imageUrl });
-      } catch {}
+      } catch (err) {}
     } else {
       await navigator.clipboard.writeText(imageUrl);
       alert("Image URL copied to clipboard!");
@@ -123,7 +123,7 @@ const ChatContainer = () => {
     setReactionPickerMsgId(null);
   };
 
-  const isTyping = typingUsers?.includes(selectedUser?._id);
+  const isTyping = typingUsers && typingUsers.includes(selectedUser?._id);
 
   if (isMessagesLoading) {
     return (
@@ -143,9 +143,7 @@ const ChatContainer = () => {
         {messages.map((message, index) => (
           <div
             key={message._id}
-            className={`chat ${
-              message.senderId === authUser._id ? "chat-end" : "chat-start"
-            } group`}
+            className={"chat " + (message.senderId === authUser._id ? "chat-end" : "chat-start") + " group"}
             ref={index === messages.length - 1 ? messageEndRef : null}
           >
             <div className="chat-image avatar">
@@ -163,36 +161,33 @@ const ChatContainer = () => {
 
             <div className="chat-header mb-1">
               <span className="font-semibold text-xs mr-1">
-                {message.senderId === authUser._id
-                  ? authUser.fullName
-                  : selectedUser.fullName}
+                {message.senderId === authUser._id ? authUser.fullName : selectedUser.fullName}
               </span>
               <time className="text-xs opacity-50">
                 {formatMessageTime(message.createdAt)}
               </time>
             </div>
 
-            {/* Reply reference */}
             {message.replyTo && (
               <div className="opacity-60 text-xs mb-1 border-l-2 border-primary pl-2 max-w-[200px] truncate">
-                ↩{" "}
-                {message.replyTo.text ||
-                  (message.replyTo.image
-                    ? "📷 Image"
-                    : message.replyTo.video
-                    ? "🎥 Video"
-                    : "📎 File")}
+                {message.replyTo.text
+                  ? "Reply: " + message.replyTo.text
+                  : message.replyTo.image
+                  ? "Reply: Photo"
+                  : message.replyTo.video
+                  ? "Reply: Video"
+                  : "Reply: File"}
               </div>
             )}
 
             <div
-              className={`chat-bubble flex flex-col max-w-[80vw] sm:max-w-none ${
-                message.senderId === authUser._id
+              className={
+                "chat-bubble flex flex-col max-w-[80vw] sm:max-w-none " +
+                (message.senderId === authUser._id
                   ? "bg-primary text-primary-content"
-                  : "bg-base-200 text-base-content"
-              }`}
+                  : "bg-base-200 text-base-content")
+              }
             >
-              {/* Image */}
               {message.image && (
                 <div className="relative group/img mb-2">
                   <img
@@ -227,7 +222,6 @@ const ChatContainer = () => {
                 </div>
               )}
 
-              {/* Video */}
               {message.video && (
                 <video
                   src={message.video}
@@ -236,7 +230,6 @@ const ChatContainer = () => {
                 />
               )}
 
-              {/* File attachment */}
               {message.fileUrl && (
                 
                   href={message.fileUrl}
@@ -252,16 +245,10 @@ const ChatContainer = () => {
                 </a>
               )}
 
-              {/* Audio */}
               {message.audio && (
-                <audio
-                  controls
-                  src={message.audio}
-                  className="max-w-[220px] mb-2"
-                />
+                <audio controls src={message.audio} className="max-w-[220px] mb-2" />
               )}
 
-              {/* Text with linkify */}
               {message.text && (
                 <Linkify
                   componentDecorator={(href, text, key) => (
@@ -280,19 +267,15 @@ const ChatContainer = () => {
                 </Linkify>
               )}
 
-              {/* Link / YouTube preview */}
               {message.text && <LinkPreview text={message.text} />}
             </div>
 
-            {/* Hover action buttons */}
             <div
-              className={`flex items-center gap-1 mt-1 opacity-0 group-hover:opacity-100 transition-opacity ${
-                message.senderId === authUser._id
-                  ? "flex-row-reverse"
-                  : "flex-row"
-              }`}
+              className={
+                "flex items-center gap-1 mt-1 opacity-0 group-hover:opacity-100 transition-opacity " +
+                (message.senderId === authUser._id ? "flex-row-reverse" : "flex-row")
+              }
             >
-              {/* Reaction picker */}
               <div className="relative">
                 <button
                   onClick={() =>
@@ -307,9 +290,10 @@ const ChatContainer = () => {
                 </button>
                 {reactionPickerMsgId === message._id && (
                   <div
-                    className={`absolute bottom-8 z-50 bg-base-100 border border-base-300 rounded-xl shadow-lg p-2 flex gap-1 ${
-                      message.senderId === authUser._id ? "right-0" : "left-0"
-                    }`}
+                    className={
+                      "absolute bottom-8 z-50 bg-base-100 border border-base-300 rounded-xl shadow-lg p-2 flex gap-1 " +
+                      (message.senderId === authUser._id ? "right-0" : "left-0")
+                    }
                   >
                     {REACTIONS.map((emoji) => (
                       <button
@@ -324,7 +308,6 @@ const ChatContainer = () => {
                 )}
               </div>
 
-              {/* Reply */}
               <button
                 onClick={() => setReplyTo(message)}
                 className="btn btn-xs btn-ghost text-zinc-400"
@@ -333,7 +316,6 @@ const ChatContainer = () => {
                 <Reply size={13} />
               </button>
 
-              {/* Delete (own messages only) */}
               {message.senderId === authUser._id && !message.isTemp && (
                 confirmDeleteId === message._id ? (
                   <div className="flex items-center gap-1 text-xs">
@@ -363,7 +345,6 @@ const ChatContainer = () => {
               )}
             </div>
 
-            {/* Reactions display */}
             {message.reactions && message.reactions.length > 0 && (
               <div className="flex flex-wrap gap-1 mt-1">
                 {Object.entries(
@@ -377,10 +358,7 @@ const ChatContainer = () => {
                     onClick={() => handleReaction(message._id, emoji)}
                     className="flex items-center gap-0.5 bg-base-200 hover:bg-base-300 rounded-full px-2 py-0.5 text-xs transition-colors"
                   >
-                    {emoji}{" "}
-                    {count > 1 && (
-                      <span className="opacity-70">{count}</span>
-                    )}
+                    {emoji} {count > 1 && <span className="opacity-70">{count}</span>}
                   </button>
                 ))}
               </div>
@@ -388,30 +366,17 @@ const ChatContainer = () => {
           </div>
         ))}
 
-        {/* Typing indicator */}
         {isTyping && (
           <div className="chat chat-start">
             <div className="chat-image avatar">
               <div className="size-8 sm:size-10 rounded-full border">
-                <img
-                  src={selectedUser.profilePic || "/avatar.png"}
-                  alt="typing"
-                />
+                <img src={selectedUser.profilePic || "/avatar.png"} alt="typing" />
               </div>
             </div>
             <div className="chat-bubble bg-base-200 text-base-content flex items-center gap-1 py-3 px-4">
-              <span
-                className="w-2 h-2 bg-current rounded-full animate-bounce"
-                style={{ animationDelay: "0ms" }}
-              />
-              <span
-                className="w-2 h-2 bg-current rounded-full animate-bounce"
-                style={{ animationDelay: "150ms" }}
-              />
-              <span
-                className="w-2 h-2 bg-current rounded-full animate-bounce"
-                style={{ animationDelay: "300ms" }}
-              />
+              <span className="w-2 h-2 bg-current rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+              <span className="w-2 h-2 bg-current rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+              <span className="w-2 h-2 bg-current rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
             </div>
           </div>
         )}
@@ -419,7 +384,6 @@ const ChatContainer = () => {
 
       <MessageInput replyTo={replyTo} onCancelReply={() => setReplyTo(null)} />
 
-      {/* Image lightbox */}
       {zoomedImage && (
         <div
           className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4"
