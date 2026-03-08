@@ -40,7 +40,6 @@ export const sendMessage = async (req, res) => {
 
         let imageUrl;
         if (image) {
-            // ✅ upload image first before saving message
             const uploadResponse = await cloudinary.uploader.upload(image);
             imageUrl = uploadResponse.secure_url;
         }
@@ -54,7 +53,6 @@ export const sendMessage = async (req, res) => {
 
         await newMessage.save();
 
-        // ✅ emit message to receiver instantly via socket
         const receiverSocketIds = userSocketMap[receiverId];
         if (receiverSocketIds && receiverSocketIds.length > 0) {
             receiverSocketIds.forEach((socketId) => {
@@ -62,7 +60,6 @@ export const sendMessage = async (req, res) => {
             });
         }
 
-        // ✅ also emit to sender so all their tabs get the message
         const senderSocketIds = userSocketMap[senderId];
         if (senderSocketIds && senderSocketIds.length > 0) {
             senderSocketIds.forEach((socketId) => {
@@ -70,13 +67,10 @@ export const sendMessage = async (req, res) => {
             });
         }
 
-        // ✅ respond to client IMMEDIATELY — don't wait for email
         res.status(201).json(newMessage);
 
-        // ✅ send email in background AFTER responding (non-blocking)
         const isReceiverOnline = receiverSocketIds && receiverSocketIds.length > 0;
         if (!isReceiverOnline) {
-            // fire and forget — no await, no blocking
             Promise.resolve().then(async () => {
                 try {
                     const receiver = await User.findById(receiverId);
@@ -108,7 +102,6 @@ export const sendMessage = async (req, res) => {
                         });
                     }
                 } catch (emailError) {
-                    // ✅ email fails silently — message already delivered
                     console.log("Email notification failed (non-critical):", emailError.message);
                 }
             });
@@ -116,6 +109,51 @@ export const sendMessage = async (req, res) => {
 
     } catch (error) {
         console.log("Error in sendMessage controller", error.message);
+        res.status(500).json({ error: "Internal Server error" });
+    }
+};
+
+// --- NEW ---
+export const deleteMessage = async (req, res) => {
+    try {
+        const { id: messageId } = req.params;
+        const userId = req.user._id;
+
+        const message = await Message.findById(messageId);
+
+        if (!message) {
+            return res.status(404).json({ error: "Message not found" });
+        }
+
+        if (message.senderId.toString() !== userId.toString()) {
+            return res.status(403).json({ error: "You can only delete your own messages" });
+        }
+
+        if (message.image) {
+            try {
+                const publicId = message.image.split("/").pop().split(".")[0];
+                await cloudinary.uploader.destroy(publicId);
+            } catch (err) {
+                console.log("Cloudinary image delete failed (non-critical):", err.message);
+            }
+        }
+
+        await Message.findByIdAndDelete(messageId);
+
+        const participantIds = [message.senderId.toString(), message.receiverId.toString()];
+        participantIds.forEach((participantId) => {
+            const socketIds = userSocketMap[participantId];
+            if (socketIds && socketIds.length > 0) {
+                socketIds.forEach((socketId) => {
+                    io.to(socketId).emit("messageDeleted", { messageId });
+                });
+            }
+        });
+
+        res.status(200).json({ message: "Message deleted successfully" });
+
+    } catch (error) {
+        console.log("Error in deleteMessage controller", error.message);
         res.status(500).json({ error: "Internal Server error" });
     }
 };

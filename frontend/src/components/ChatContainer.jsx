@@ -1,10 +1,11 @@
 import { useChatStore } from "../store/useChatStore";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import ChatHeader from "./ChatHeader";
 import MessageInput from "./MessageInput";
 import MessageSkeleton from "./skeletons/MessageSkeleton";
 import { useAuthStore } from "../store/useAuthStore";
 import { formatMessageTime } from "../lib/utils";
+import { Trash2, X, ZoomIn, Download, Share2 } from "lucide-react";
 
 const ChatContainer = () => {
   const {
@@ -14,9 +15,13 @@ const ChatContainer = () => {
     selectedUser,
     subscribeToMessages,
     unsubscribeFromMessages,
+    deleteMessage,
   } = useChatStore();
   const { authUser } = useAuthStore();
   const messageEndRef = useRef(null);
+
+  const [zoomedImage, setZoomedImage] = useState(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
 
   useEffect(() => {
     if (selectedUser?._id) {
@@ -31,6 +36,37 @@ const ChatContainer = () => {
       messageEndRef.current.scrollIntoView({ behavior: "smooth" });
     }
   }, [messages]);
+
+  const handleDeleteMessage = async (messageId) => {
+    await deleteMessage(messageId);
+    setConfirmDeleteId(null);
+  };
+
+  const handleDownloadImage = async (imageUrl) => {
+    try {
+      const response = await fetch(imageUrl);
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "image_" + Date.now() + ".jpg";
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      window.open(imageUrl, "_blank");
+    }
+  };
+
+  const handleShareImage = async (imageUrl) => {
+    if (navigator.share) {
+      try {
+        await navigator.share({ url: imageUrl });
+      } catch {}
+    } else {
+      await navigator.clipboard.writeText(imageUrl);
+      alert("Image URL copied to clipboard!");
+    }
+  };
 
   if (isMessagesLoading) {
     return (
@@ -79,19 +115,113 @@ const ChatContainer = () => {
                 : "bg-base-200 text-base-content"
             }`}>
               {message.image && (
-                <img
-                  src={message.image}
-                  alt="Attachment"
-                  className="max-w-[160px] sm:max-w-[200px] rounded-md mb-2"
-                />
+                <div className="relative group/img mb-2">
+                  <img
+                    src={message.image}
+                    alt="Attachment"
+                    className="max-w-[160px] sm:max-w-[200px] rounded-md cursor-zoom-in"
+                    onClick={() => setZoomedImage(message.image)}
+                  />
+                  <div className="absolute top-1 right-1 flex gap-1 opacity-0 group-hover/img:opacity-100 transition-opacity">
+                    <button
+                      onClick={() => setZoomedImage(message.image)}
+                      className="btn btn-xs btn-circle bg-black/50 border-none text-white hover:bg-black/70"
+                      title="Zoom"
+                    >
+                      <ZoomIn size={12} />
+                    </button>
+                    <button
+                      onClick={() => handleDownloadImage(message.image)}
+                      className="btn btn-xs btn-circle bg-black/50 border-none text-white hover:bg-black/70"
+                      title="Download"
+                    >
+                      <Download size={12} />
+                    </button>
+                    <button
+                      onClick={() => handleShareImage(message.image)}
+                      className="btn btn-xs btn-circle bg-black/50 border-none text-white hover:bg-black/70"
+                      title="Share"
+                    >
+                      <Share2 size={12} />
+                    </button>
+                  </div>
+                </div>
               )}
               {message.text && <p>{message.text}</p>}
             </div>
+
+            {message.senderId === authUser._id && !message.isTemp && (
+              <div className="chat-footer mt-1">
+                {confirmDeleteId === message._id ? (
+                  <div className="flex items-center gap-2 text-xs">
+                    <span className="opacity-70">Delete?</span>
+                    <button
+                      onClick={() => handleDeleteMessage(message._id)}
+                      className="text-error font-semibold hover:underline"
+                    >
+                      Yes
+                    </button>
+                    <button
+                      onClick={() => setConfirmDeleteId(null)}
+                      className="opacity-60 hover:underline"
+                    >
+                      No
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setConfirmDeleteId(message._id)}
+                    className="opacity-0 hover:opacity-100 transition-opacity text-error/70 hover:text-error"
+                    title="Delete message"
+                  >
+                    <Trash2 size={13} />
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         ))}
       </div>
 
       <MessageInput />
+
+      {zoomedImage && (
+        <div
+          className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4"
+          onClick={() => setZoomedImage(null)}
+        >
+          <div
+            className="relative max-w-[90vw] max-h-[90vh]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={() => setZoomedImage(null)}
+              className="absolute -top-4 -right-4 btn btn-circle btn-sm bg-black/60 border-none text-white hover:bg-black/80 z-10"
+            >
+              <X size={16} />
+            </button>
+            <img
+              src={zoomedImage}
+              alt="Zoomed"
+              className="max-w-[85vw] max-h-[80vh] object-contain rounded-lg shadow-2xl"
+            />
+            <div className="flex justify-center gap-3 mt-3">
+              <button
+                onClick={() => handleDownloadImage(zoomedImage)}
+                className="btn btn-sm gap-2 bg-white/10 border-white/20 text-white hover:bg-white/20"
+              >
+                <Download size={14} /> Download
+              </button>
+              <button
+                onClick={() => handleShareImage(zoomedImage)}
+                className="btn btn-sm gap-2 bg-white/10 border-white/20 text-white hover:bg-white/20"
+              >
+                <Share2 size={14} /> Share
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

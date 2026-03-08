@@ -6,7 +6,7 @@ import { useAuthStore } from "./useAuthStore";
 export const useChatStore = create((set, get) => ({
   messages: [],
   users: [],
-  selectedUser: null, // ✅ no localStorage — prevents cross-user data leaking
+  selectedUser: null,
   isUsersLoading: false,
   isMessagesLoading: false,
 
@@ -38,7 +38,6 @@ export const useChatStore = create((set, get) => ({
     const { selectedUser, messages } = get();
     const authUser = useAuthStore.getState().authUser;
 
-    // ✅ show message instantly on sender's screen
     const tempMessage = {
       _id: `temp_${Date.now()}`,
       senderId: authUser._id,
@@ -56,19 +55,26 @@ export const useChatStore = create((set, get) => ({
         `/messages/send/${selectedUser._id}`,
         messageData
       );
-
-      // ✅ replace temp message with real server message
       set({
         messages: get().messages.map((m) =>
           m._id === tempMessage._id ? res.data : m
         ),
       });
     } catch (error) {
-      // ✅ remove temp message if failed
       set({
         messages: get().messages.filter((m) => m._id !== tempMessage._id),
       });
       toast.error("Failed to send message");
+    }
+  },
+
+  // --- NEW ---
+  deleteMessage: async (messageId) => {
+    try {
+      await axiosInstance.delete(`/messages/${messageId}`);
+      set({ messages: get().messages.filter((m) => m._id !== messageId) });
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Failed to delete message");
     }
   },
 
@@ -80,6 +86,7 @@ export const useChatStore = create((set, get) => ({
     if (!socket) return;
 
     socket.off("newMessage");
+    socket.off("messageDeleted");
 
     socket.on("newMessage", (newMessage) => {
       const isFromSelectedUser = newMessage.senderId === selectedUser._id;
@@ -88,11 +95,11 @@ export const useChatStore = create((set, get) => ({
 
       const messages = get().messages;
 
-      // ✅ replace temp message with real one from socket
       const tempExists = messages.find(
-        (m) => m.isTemp && 
-        m.text === newMessage.text && 
-        m.senderId === newMessage.senderId
+        (m) =>
+          m.isTemp &&
+          m.text === newMessage.text &&
+          m.senderId === newMessage.senderId
       );
 
       if (tempExists) {
@@ -102,11 +109,15 @@ export const useChatStore = create((set, get) => ({
           ),
         });
       } else {
-        // ✅ prevent duplicates
         const exists = messages.find((m) => m._id === newMessage._id);
         if (exists) return;
         set({ messages: [...messages, newMessage] });
       }
+    });
+
+    // --- NEW ---
+    socket.on("messageDeleted", ({ messageId }) => {
+      set({ messages: get().messages.filter((m) => m._id !== messageId) });
     });
   },
 
@@ -114,10 +125,10 @@ export const useChatStore = create((set, get) => ({
     const socket = useAuthStore.getState().socket;
     if (!socket) return;
     socket.off("newMessage");
+    socket.off("messageDeleted"); // --- NEW ---
   },
 
   setSelectedUser: (selectedUser) => {
-    // ✅ removed localStorage — no more cross-user data leaking
     set({ selectedUser });
   },
 }));
