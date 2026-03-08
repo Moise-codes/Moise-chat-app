@@ -9,9 +9,9 @@ import { Trash2, X, ZoomIn, Download, Share2, SmilePlus, Reply, FileText } from 
 import Linkify from "react-linkify";
 
 const REACTIONS = ["👍", "❤️", "😂", "😮", "😢", "🔥"];
-
 const URL_REGEX = /(https?:\/\/[^\s]+)/g;
 const YOUTUBE_ID_REGEX = /(?:v=|youtu\.be\/)([^&\s]+)/;
+const FORMAT_REGEX = /(\*\*.*?\*\*|_.*?_|~~.*?~~)/g;
 
 function YoutubePreview({ videoId, url }) {
   return (
@@ -52,6 +52,27 @@ function LinkPreview({ text }) {
     }
   }
   return <PlainLinkPreview url={url} />;
+}
+
+function FormattedText({ text }) {
+  if (!text) return null;
+  const parts = text.split(FORMAT_REGEX);
+  return (
+    <p>
+      {parts.map((part, i) => {
+        if (part.startsWith("**") && part.endsWith("**")) {
+          return <strong key={i}>{part.slice(2, -2)}</strong>;
+        }
+        if (part.startsWith("_") && part.endsWith("_")) {
+          return <em key={i}>{part.slice(1, -1)}</em>;
+        }
+        if (part.startsWith("~~") && part.endsWith("~~")) {
+          return <s key={i}>{part.slice(2, -2)}</s>;
+        }
+        return part;
+      })}
+    </p>
+  );
 }
 
 const ChatContainer = () => {
@@ -148,7 +169,11 @@ const ChatContainer = () => {
             <div className="chat-image avatar">
               <div className="size-8 sm:size-10 rounded-full border">
                 <img
-                  src={message.senderId === authUser._id ? authUser.profilePic || "/avatar.png" : selectedUser.profilePic || "/avatar.png"}
+                  src={
+                    message.senderId === authUser._id
+                      ? authUser.profilePic || "/avatar.png"
+                      : selectedUser.profilePic || "/avatar.png"
+                  }
                   alt="profile pic"
                 />
               </div>
@@ -158,7 +183,9 @@ const ChatContainer = () => {
               <span className="font-semibold text-xs mr-1">
                 {message.senderId === authUser._id ? authUser.fullName : selectedUser.fullName}
               </span>
-              <time className="text-xs opacity-50">{formatMessageTime(message.createdAt)}</time>
+              <time className="text-xs opacity-50">
+                {formatMessageTime(message.createdAt)}
+              </time>
             </div>
 
             {message.replyTo && (
@@ -173,8 +200,14 @@ const ChatContainer = () => {
               </div>
             )}
 
-            <div className={"chat-bubble flex flex-col max-w-[80vw] sm:max-w-none " + (message.senderId === authUser._id ? "bg-primary text-primary-content" : "bg-base-200 text-base-content")}>
-
+            <div
+              className={
+                "chat-bubble flex flex-col max-w-[80vw] sm:max-w-none " +
+                (message.senderId === authUser._id
+                  ? "bg-primary text-primary-content"
+                  : "bg-base-200 text-base-content")
+              }
+            >
               {message.image && (
                 <div className="relative group/img mb-2">
                   <img
@@ -204,7 +237,9 @@ const ChatContainer = () => {
               {message.fileUrl && (
                 <a href={message.fileUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 bg-black/10 rounded-lg px-3 py-2 mb-2 hover:bg-black/20 transition-colors">
                   <FileText size={18} />
-                  <span className="text-xs underline truncate max-w-[160px]">{message.fileName || "Download file"}</span>
+                  <span className="text-xs underline truncate max-w-[160px]">
+                    {message.fileName || "Download file"}
+                  </span>
                   <Download size={14} />
                 </a>
               )}
@@ -214,18 +249,26 @@ const ChatContainer = () => {
               )}
 
               {message.text && (
-                <Linkify componentDecorator={(href, text, key) => (
-                  <a href={href} key={key} target="_blank" rel="noopener noreferrer" className="underline opacity-80">{text}</a>
-                )}>
-                  <p>{message.text}</p>
+                <Linkify
+                  componentDecorator={(href, text, key) => (
+                    <a href={href} key={key} target="_blank" rel="noopener noreferrer" className="underline opacity-80">
+                      {text}
+                    </a>
+                  )}
+                >
+                  <FormattedText text={message.text} />
                 </Linkify>
               )}
 
               {message.text && <LinkPreview text={message.text} />}
-
             </div>
 
-            <div className={"flex items-center gap-1 mt-1 opacity-0 group-hover:opacity-100 transition-opacity " + (message.senderId === authUser._id ? "flex-row-reverse" : "flex-row")}>
+            <div
+              className={
+                "flex items-center gap-1 mt-1 opacity-0 group-hover:opacity-100 transition-opacity " +
+                (message.senderId === authUser._id ? "flex-row-reverse" : "flex-row")
+              }
+            >
               <div className="relative">
                 <button
                   onClick={() => setReactionPickerMsgId(reactionPickerMsgId === message._id ? null : message._id)}
@@ -235,7 +278,12 @@ const ChatContainer = () => {
                   <SmilePlus size={13} />
                 </button>
                 {reactionPickerMsgId === message._id && (
-                  <div className={"absolute bottom-8 z-50 bg-base-100 border border-base-300 rounded-xl shadow-lg p-2 flex gap-1 " + (message.senderId === authUser._id ? "right-0" : "left-0")}>
+                  <div
+                    className={
+                      "absolute bottom-8 z-50 bg-base-100 border border-base-300 rounded-xl shadow-lg p-2 flex gap-1 " +
+                      (message.senderId === authUser._id ? "right-0" : "left-0")
+                    }
+                  >
                     {REACTIONS.map((emoji) => (
                       <button key={emoji} onClick={() => handleReaction(message._id, emoji)} className="text-lg hover:scale-125 transition-transform">
                         {emoji}
