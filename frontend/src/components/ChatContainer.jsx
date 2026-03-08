@@ -11,7 +11,7 @@ import Linkify from "react-linkify";
 const REACTIONS = ["👍", "❤️", "😂", "😮", "😢", "🔥"];
 const URL_REGEX = /(https?:\/\/[^\s]+)/g;
 const YOUTUBE_ID_REGEX = /(?:v=|youtu\.be\/)([^&\s]+)/;
-const FORMAT_REGEX = /(\*\*[^*]+\*\*|_[^_]+_|~~[^~]+~~)/g;
+const FORMAT_REGEX = /(\*{1,4}[^*]+\*{0,4}|_{1,2}[^_]+_{0,2}|~{1,4}[^~]+~{0,4})/g;
 
 function YoutubePreview({ videoId, url }) {
   return (
@@ -60,14 +60,29 @@ function FormattedText({ text }) {
   return (
     <p>
       {parts.map((part, i) => {
-        if (part.length > 4 && part.startsWith("**") && part.endsWith("**")) {
-          return <strong key={i}>{part.slice(2, -2)}</strong>;
+        if (part.startsWith("*") && part.endsWith("*")) {
+          const inner = part.replace(/^\*+/, "").replace(/\*+$/, "");
+          if (inner) return <strong key={i}>{inner}</strong>;
         }
-        if (part.length > 2 && part.startsWith("_") && part.endsWith("_") && !part.startsWith("__")) {
-          return <em key={i}>{part.slice(1, -1)}</em>;
+        if (part.startsWith("_") && part.endsWith("_")) {
+          const inner = part.replace(/^_+/, "").replace(/_+$/, "");
+          if (inner) return <em key={i}>{inner}</em>;
         }
-        if (part.length > 4 && part.startsWith("~~") && part.endsWith("~~")) {
-          return <s key={i}>{part.slice(2, -2)}</s>;
+        if (part.startsWith("~") && part.endsWith("~")) {
+          const inner = part.replace(/^~+/, "").replace(/~+$/, "");
+          if (inner) return <s key={i}>{inner}</s>;
+        }
+        if (part.startsWith("*")) {
+          const inner = part.replace(/^\*+/, "");
+          if (inner) return <strong key={i}>{inner}</strong>;
+        }
+        if (part.startsWith("_")) {
+          const inner = part.replace(/^_+/, "");
+          if (inner) return <em key={i}>{inner}</em>;
+        }
+        if (part.startsWith("~")) {
+          const inner = part.replace(/^~+/, "");
+          if (inner) return <s key={i}>{inner}</s>;
         }
         return part;
       })}
