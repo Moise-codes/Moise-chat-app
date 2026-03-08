@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+
 const messageSchema = new mongoose.Schema({
     senderId: {
         type: mongoose.Schema.Types.ObjectId,
@@ -10,12 +11,24 @@ const messageSchema = new mongoose.Schema({
         ref: "User",
         required: true,
     },
-    text: {
-        type: String,
+    text: { type: String },
+    image: { type: String },
+    video: { type: String },
+    fileUrl: { type: String },
+    fileName: { type: String },
+    audio: { type: String },
+    replyTo: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Message",
+        default: null,
     },
-    image: {
-        type: String,
-    },
-}, {timestamps: true})
-const Message = mongoose.model("Message",messageSchema);
+    reactions: [
+        {
+            userId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+            emoji: { type: String },
+        }
+    ],
+}, { timestamps: true });
+
+const Message = mongoose.model("Message", messageSchema);
 export default Message;

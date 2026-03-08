@@ -8,14 +8,13 @@ const server = http.createServer(app);
 const io = new Server(server, {
     cors: {
         origin: [process.env.FRONTEND_URL || "http://localhost:5173"],
-        credentials: true, // ✅ allow cookies/auth headers
+        credentials: true,
     },
-    pingTimeout: 60000,   // ✅ wait 60s before closing idle connection
-    pingInterval: 25000,  // ✅ ping every 25s to keep connection alive
-    transports: ["websocket", "polling"], // ✅ websocket first, fallback to polling
+    pingTimeout: 60000,
+    pingInterval: 25000,
+    transports: ["websocket", "polling"],
 });
 
-// store online users { userId: [socketId1, socketId2, ...] }
 const userSocketMap = {};
 
 io.on("connection", (socket) => {
@@ -23,30 +22,29 @@ io.on("connection", (socket) => {
     console.log("A user connected", socket.id, "userId:", userId);
 
     if (userId) {
-        if (!userSocketMap[userId]) {
-            userSocketMap[userId] = [];
-        }
+        if (!userSocketMap[userId]) userSocketMap[userId] = [];
         userSocketMap[userId].push(socket.id);
     }
 
-    // ✅ emit to ALL clients including the one who just joined
     io.emit("getOnlineUsers", Object.keys(userSocketMap));
-
-    // ✅ confirm to the joining user they are connected
     socket.emit("connected", { socketId: socket.id, userId });
+
+    // Typing indicator
+    socket.on("typing", ({ senderId, receiverId, isTyping }) => {
+        const receiverSocketIds = userSocketMap[receiverId];
+        if (receiverSocketIds && receiverSocketIds.length > 0) {
+            receiverSocketIds.forEach((socketId) => {
+                io.to(socketId).emit("typing", { senderId, isTyping });
+            });
+        }
+    });
 
     socket.on("disconnect", (reason) => {
         console.log("A user disconnected", socket.id, "reason:", reason);
-
         if (userId && userSocketMap[userId]) {
-            userSocketMap[userId] = userSocketMap[userId].filter(
-                (id) => id !== socket.id
-            );
-            if (userSocketMap[userId].length === 0) {
-                delete userSocketMap[userId];
-            }
+            userSocketMap[userId] = userSocketMap[userId].filter((id) => id !== socket.id);
+            if (userSocketMap[userId].length === 0) delete userSocketMap[userId];
         }
-
         io.emit("getOnlineUsers", Object.keys(userSocketMap));
     });
 });
