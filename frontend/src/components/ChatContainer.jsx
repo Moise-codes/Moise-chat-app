@@ -10,48 +10,49 @@ import Linkify from "react-linkify";
 
 const REACTIONS = ["👍", "❤️", "😂", "😮", "😢", "🔥"];
 
-const LinkPreview = ({ text }) => {
-  const urlRegex = /(https?:\/\/[^\s]+)/g;
-  const urls = text ? text.match(urlRegex) : null;
-  if (!urls) return null;
-  const url = urls[0];
-  const isYoutube = url.includes("youtube.com") || url.includes("youtu.be");
-  const videoId = isYoutube ? url.match(/(?:v=|youtu\.be\/)([^&\s]+)/) : null;
+const URL_REGEX = /(https?:\/\/[^\s]+)/g;
+const YOUTUBE_ID_REGEX = /(?:v=|youtu\.be\/)([^&\s]+)/;
 
-  if (isYoutube && videoId && videoId[1]) {
-    return (
-      <div className="mt-2 rounded-lg overflow-hidden border border-base-300 max-w-[260px]">
-        <img
-          src={"https://img.youtube.com/vi/" + videoId[1] + "/hqdefault.jpg"}
-          alt="YouTube preview"
-          className="w-full object-cover"
-        />
-        <div className="p-2 bg-base-200 flex items-center gap-2">
-          <span className="text-xs font-semibold text-error">YouTube</span>
-          
-            href={url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-xs underline truncate opacity-70"
-          >
-            {url}
-          </a>
-        </div>
-      </div>
-    );
-  }
-
+function YoutubePreview({ videoId, url }) {
   return (
-    
-      href={url}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="mt-1 block text-xs underline opacity-70 truncate max-w-[220px]"
-    >
+    <div className="mt-2 rounded-lg overflow-hidden border border-base-300 max-w-[260px]">
+      <img
+        src={"https://img.youtube.com/vi/" + videoId + "/hqdefault.jpg"}
+        alt="YouTube preview"
+        className="w-full object-cover"
+      />
+      <div className="p-2 bg-base-200 flex items-center gap-2">
+        <span className="text-xs font-semibold text-error">YouTube</span>
+        <a href={url} target="_blank" rel="noopener noreferrer" className="text-xs underline truncate opacity-70">
+          {url}
+        </a>
+      </div>
+    </div>
+  );
+}
+
+function PlainLinkPreview({ url }) {
+  return (
+    <a href={url} target="_blank" rel="noopener noreferrer" className="mt-1 block text-xs underline opacity-70 truncate max-w-[220px]">
       {url}
     </a>
   );
-};
+}
+
+function LinkPreview({ text }) {
+  if (!text) return null;
+  const urls = text.match(URL_REGEX);
+  if (!urls) return null;
+  const url = urls[0];
+  const isYoutube = url.includes("youtube.com") || url.includes("youtu.be");
+  if (isYoutube) {
+    const match = url.match(YOUTUBE_ID_REGEX);
+    if (match && match[1]) {
+      return <YoutubePreview videoId={match[1]} url={url} />;
+    }
+  }
+  return <PlainLinkPreview url={url} />;
+}
 
 const ChatContainer = () => {
   const {
@@ -109,9 +110,7 @@ const ChatContainer = () => {
 
   const handleShareImage = async (imageUrl) => {
     if (navigator.share) {
-      try {
-        await navigator.share({ url: imageUrl });
-      } catch (err) {}
+      try { await navigator.share({ url: imageUrl }); } catch (err) {}
     } else {
       await navigator.clipboard.writeText(imageUrl);
       alert("Image URL copied to clipboard!");
@@ -149,11 +148,7 @@ const ChatContainer = () => {
             <div className="chat-image avatar">
               <div className="size-8 sm:size-10 rounded-full border">
                 <img
-                  src={
-                    message.senderId === authUser._id
-                      ? authUser.profilePic || "/avatar.png"
-                      : selectedUser.profilePic || "/avatar.png"
-                  }
+                  src={message.senderId === authUser._id ? authUser.profilePic || "/avatar.png" : selectedUser.profilePic || "/avatar.png"}
                   alt="profile pic"
                 />
               </div>
@@ -163,9 +158,7 @@ const ChatContainer = () => {
               <span className="font-semibold text-xs mr-1">
                 {message.senderId === authUser._id ? authUser.fullName : selectedUser.fullName}
               </span>
-              <time className="text-xs opacity-50">
-                {formatMessageTime(message.createdAt)}
-              </time>
+              <time className="text-xs opacity-50">{formatMessageTime(message.createdAt)}</time>
             </div>
 
             {message.replyTo && (
@@ -180,14 +173,8 @@ const ChatContainer = () => {
               </div>
             )}
 
-            <div
-              className={
-                "chat-bubble flex flex-col max-w-[80vw] sm:max-w-none " +
-                (message.senderId === authUser._id
-                  ? "bg-primary text-primary-content"
-                  : "bg-base-200 text-base-content")
-              }
-            >
+            <div className={"chat-bubble flex flex-col max-w-[80vw] sm:max-w-none " + (message.senderId === authUser._id ? "bg-primary text-primary-content" : "bg-base-200 text-base-content")}>
+
               {message.image && (
                 <div className="relative group/img mb-2">
                   <img
@@ -197,25 +184,13 @@ const ChatContainer = () => {
                     onClick={() => setZoomedImage(message.image)}
                   />
                   <div className="absolute top-1 right-1 flex gap-1 opacity-0 group-hover/img:opacity-100 transition-opacity">
-                    <button
-                      onClick={() => setZoomedImage(message.image)}
-                      className="btn btn-xs btn-circle bg-black/50 border-none text-white hover:bg-black/70"
-                      title="Zoom"
-                    >
+                    <button onClick={() => setZoomedImage(message.image)} className="btn btn-xs btn-circle bg-black/50 border-none text-white hover:bg-black/70" title="Zoom">
                       <ZoomIn size={12} />
                     </button>
-                    <button
-                      onClick={() => handleDownloadImage(message.image)}
-                      className="btn btn-xs btn-circle bg-black/50 border-none text-white hover:bg-black/70"
-                      title="Download"
-                    >
+                    <button onClick={() => handleDownloadImage(message.image)} className="btn btn-xs btn-circle bg-black/50 border-none text-white hover:bg-black/70" title="Download">
                       <Download size={12} />
                     </button>
-                    <button
-                      onClick={() => handleShareImage(message.image)}
-                      className="btn btn-xs btn-circle bg-black/50 border-none text-white hover:bg-black/70"
-                      title="Share"
-                    >
+                    <button onClick={() => handleShareImage(message.image)} className="btn btn-xs btn-circle bg-black/50 border-none text-white hover:bg-black/70" title="Share">
                       <Share2 size={12} />
                     </button>
                   </div>
@@ -223,24 +198,13 @@ const ChatContainer = () => {
               )}
 
               {message.video && (
-                <video
-                  src={message.video}
-                  controls
-                  className="max-w-[220px] sm:max-w-[280px] rounded-md mb-2"
-                />
+                <video src={message.video} controls className="max-w-[220px] sm:max-w-[280px] rounded-md mb-2" />
               )}
 
               {message.fileUrl && (
-                
-                  href={message.fileUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-2 bg-black/10 rounded-lg px-3 py-2 mb-2 hover:bg-black/20 transition-colors"
-                >
+                <a href={message.fileUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 bg-black/10 rounded-lg px-3 py-2 mb-2 hover:bg-black/20 transition-colors">
                   <FileText size={18} />
-                  <span className="text-xs underline truncate max-w-[160px]">
-                    {message.fileName || "Download file"}
-                  </span>
+                  <span className="text-xs underline truncate max-w-[160px]">{message.fileName || "Download file"}</span>
                   <Download size={14} />
                 </a>
               )}
@@ -250,57 +214,30 @@ const ChatContainer = () => {
               )}
 
               {message.text && (
-                <Linkify
-                  componentDecorator={(href, text, key) => (
-                    
-                      href={href}
-                      key={key}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="underline opacity-80"
-                    >
-                      {text}
-                    </a>
-                  )}
-                >
+                <Linkify componentDecorator={(href, text, key) => (
+                  <a href={href} key={key} target="_blank" rel="noopener noreferrer" className="underline opacity-80">{text}</a>
+                )}>
                   <p>{message.text}</p>
                 </Linkify>
               )}
 
               {message.text && <LinkPreview text={message.text} />}
+
             </div>
 
-            <div
-              className={
-                "flex items-center gap-1 mt-1 opacity-0 group-hover:opacity-100 transition-opacity " +
-                (message.senderId === authUser._id ? "flex-row-reverse" : "flex-row")
-              }
-            >
+            <div className={"flex items-center gap-1 mt-1 opacity-0 group-hover:opacity-100 transition-opacity " + (message.senderId === authUser._id ? "flex-row-reverse" : "flex-row")}>
               <div className="relative">
                 <button
-                  onClick={() =>
-                    setReactionPickerMsgId(
-                      reactionPickerMsgId === message._id ? null : message._id
-                    )
-                  }
+                  onClick={() => setReactionPickerMsgId(reactionPickerMsgId === message._id ? null : message._id)}
                   className="btn btn-xs btn-ghost text-zinc-400"
                   title="React"
                 >
                   <SmilePlus size={13} />
                 </button>
                 {reactionPickerMsgId === message._id && (
-                  <div
-                    className={
-                      "absolute bottom-8 z-50 bg-base-100 border border-base-300 rounded-xl shadow-lg p-2 flex gap-1 " +
-                      (message.senderId === authUser._id ? "right-0" : "left-0")
-                    }
-                  >
+                  <div className={"absolute bottom-8 z-50 bg-base-100 border border-base-300 rounded-xl shadow-lg p-2 flex gap-1 " + (message.senderId === authUser._id ? "right-0" : "left-0")}>
                     {REACTIONS.map((emoji) => (
-                      <button
-                        key={emoji}
-                        onClick={() => handleReaction(message._id, emoji)}
-                        className="text-lg hover:scale-125 transition-transform"
-                      >
+                      <button key={emoji} onClick={() => handleReaction(message._id, emoji)} className="text-lg hover:scale-125 transition-transform">
                         {emoji}
                       </button>
                     ))}
@@ -308,11 +245,7 @@ const ChatContainer = () => {
                 )}
               </div>
 
-              <button
-                onClick={() => setReplyTo(message)}
-                className="btn btn-xs btn-ghost text-zinc-400"
-                title="Reply"
-              >
+              <button onClick={() => setReplyTo(message)} className="btn btn-xs btn-ghost text-zinc-400" title="Reply">
                 <Reply size={13} />
               </button>
 
@@ -320,25 +253,11 @@ const ChatContainer = () => {
                 confirmDeleteId === message._id ? (
                   <div className="flex items-center gap-1 text-xs">
                     <span className="opacity-70">Delete?</span>
-                    <button
-                      onClick={() => handleDeleteMessage(message._id)}
-                      className="text-error font-semibold hover:underline"
-                    >
-                      Yes
-                    </button>
-                    <button
-                      onClick={() => setConfirmDeleteId(null)}
-                      className="opacity-60 hover:underline"
-                    >
-                      No
-                    </button>
+                    <button onClick={() => handleDeleteMessage(message._id)} className="text-error font-semibold hover:underline">Yes</button>
+                    <button onClick={() => setConfirmDeleteId(null)} className="opacity-60 hover:underline">No</button>
                   </div>
                 ) : (
-                  <button
-                    onClick={() => setConfirmDeleteId(message._id)}
-                    className="btn btn-xs btn-ghost text-error/70 hover:text-error"
-                    title="Delete"
-                  >
+                  <button onClick={() => setConfirmDeleteId(message._id)} className="btn btn-xs btn-ghost text-error/70 hover:text-error" title="Delete">
                     <Trash2 size={13} />
                   </button>
                 )
@@ -353,11 +272,7 @@ const ChatContainer = () => {
                     return acc;
                   }, {})
                 ).map(([emoji, count]) => (
-                  <button
-                    key={emoji}
-                    onClick={() => handleReaction(message._id, emoji)}
-                    className="flex items-center gap-0.5 bg-base-200 hover:bg-base-300 rounded-full px-2 py-0.5 text-xs transition-colors"
-                  >
+                  <button key={emoji} onClick={() => handleReaction(message._id, emoji)} className="flex items-center gap-0.5 bg-base-200 hover:bg-base-300 rounded-full px-2 py-0.5 text-xs transition-colors">
                     {emoji} {count > 1 && <span className="opacity-70">{count}</span>}
                   </button>
                 ))}
@@ -385,36 +300,17 @@ const ChatContainer = () => {
       <MessageInput replyTo={replyTo} onCancelReply={() => setReplyTo(null)} />
 
       {zoomedImage && (
-        <div
-          className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4"
-          onClick={() => setZoomedImage(null)}
-        >
-          <div
-            className="relative max-w-[90vw] max-h-[90vh]"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <button
-              onClick={() => setZoomedImage(null)}
-              className="absolute -top-4 -right-4 btn btn-circle btn-sm bg-black/60 border-none text-white hover:bg-black/80 z-10"
-            >
+        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4" onClick={() => setZoomedImage(null)}>
+          <div className="relative max-w-[90vw] max-h-[90vh]" onClick={(e) => e.stopPropagation()}>
+            <button onClick={() => setZoomedImage(null)} className="absolute -top-4 -right-4 btn btn-circle btn-sm bg-black/60 border-none text-white hover:bg-black/80 z-10">
               <X size={16} />
             </button>
-            <img
-              src={zoomedImage}
-              alt="Zoomed"
-              className="max-w-[85vw] max-h-[80vh] object-contain rounded-lg shadow-2xl"
-            />
+            <img src={zoomedImage} alt="Zoomed" className="max-w-[85vw] max-h-[80vh] object-contain rounded-lg shadow-2xl" />
             <div className="flex justify-center gap-3 mt-3">
-              <button
-                onClick={() => handleDownloadImage(zoomedImage)}
-                className="btn btn-sm gap-2 bg-white/10 border-white/20 text-white hover:bg-white/20"
-              >
+              <button onClick={() => handleDownloadImage(zoomedImage)} className="btn btn-sm gap-2 bg-white/10 border-white/20 text-white hover:bg-white/20">
                 <Download size={14} /> Download
               </button>
-              <button
-                onClick={() => handleShareImage(zoomedImage)}
-                className="btn btn-sm gap-2 bg-white/10 border-white/20 text-white hover:bg-white/20"
-              >
+              <button onClick={() => handleShareImage(zoomedImage)} className="btn btn-sm gap-2 bg-white/10 border-white/20 text-white hover:bg-white/20">
                 <Share2 size={14} /> Share
               </button>
             </div>
